@@ -1,19 +1,3 @@
-/*
- * Fahrzeugcheck – Konfiguration der FF Naila
- * ------------------------------------------------------------------
- * Übernommen aus den Checklisten „Version 2.0“ (Word) je Fahrzeug.
- * Die Nummern der Prüfpunkte werden automatisch in Reihenfolge vergeben
- * und entsprechen damit den Nummern auf den Papier-Checklisten.
- *
- * Ein Prüfpunkt kann einfach ein Text sein (dann: i.O. / S / B) oder ein Objekt:
- *   { text: "…", naechstePruefung: true }  → zusätzlich Feld „Nächste Prüfung“ (Monat/Jahr)
- *   { typ: "reifen", text: "…" }           → Reifendruck je Rad eintragen, Sollwerte aus fahrzeug.reifen
- *   { typ: "zahl", text: "…", einheit: "km" } → Zahl eintragen
- *   { typ: "monat", text: "…" }            → Monat/Jahr eintragen (z. B. nächster TÜV)
- *   nr: false                              → Punkt ohne Nummer (zählt nicht mit)
- *   pflicht: false                         → darf leer bleiben
- *   hinweis: "…"                           → kleiner Hilfetext
- */
 {
 const REIFEN = { typ: "reifen", text: "Reifenluftdruck" };
 const NP = text => ({ text, naechstePruefung: true });
@@ -35,7 +19,7 @@ window.FAHRZEUGCHECK_CONFIG = {
   organisation: "Freiwillige Feuerwehr Naila",
 
   // Mehrere Empfänger mit Komma trennen. PLATZHALTER – bitte ersetzen!
-  empfaenger: "fahrzeugpruefung@example.org",
+  empfaenger: "butji1337@gmail.com",
 
   // {fahrzeug} {datum} {maengel} (und {pruefart}, falls Prüfarten genutzt werden)
   // {datum} = Prüfdatum, vorbelegt mit dem aktuellen Datum.
