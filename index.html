@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#b3241c">
+<title>Fahrzeugcheck</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: nüchternes Arbeitsgerät für die Fahrzeughalle – klar, robust, schnell abzuhaken.
+   IDEA: die Papier-Checkliste (i.O. / S / B, nummerierte Punkte) am Klemmbrett neben dem Fahrzeug, nur digital.
+   PICTURE: das Formular selbst; roter Kopf wie die Fahrzeugfront, große Daumen-Tasten.
+   COLOUR and TYPE: Feuerrot als Kopf und Akzent, Weiß/Anthrazit, Grün = i.O., Rot = S, Bernstein = B; Barlow (Condensed) wie Fahrzeugbeschriftung.
+   LAYOUT: eine ruhige Spalte bis 720px, Abschnitte als Karten, Fortschrittsleiste unten fest. */
+:root{color-scheme:light dark;
+  --bg:light-dark(#f3f3f1,#121314);--card:light-dark(#ffffff,#1d1f21);--ink:light-dark(#17191b,#eef0f1);
+  --mute:light-dark(#5d6266,#a3a9ad);--line:light-dark(#e2e2df,#2e3134);--red:#b3241c;--redink:light-dark(#b3241c,#ff7a6e);
+  --ok:light-dark(#1d7a39,#5fd185);--okbg:light-dark(#e3f4e8,#173222);--bad:light-dark(#c0261c,#ff7a6e);--badbg:light-dark(#fde8e6,#3a1c1a);
+  --warn:light-dark(#9a5b00,#f2b54a);--warnbg:light-dark(#fff3dc,#3a2c12);--on:light-dark(#fff,#121314);--field:light-dark(#f7f7f5,#151718)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Barlow",Roboto,system-ui,sans-serif;overflow-x:clip;padding-bottom:96px}
+h1,h2,h3{font-family:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;font-weight:700;line-height:1.05;margin:0;text-wrap:balance}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #2b7de9;outline-offset:2px}
+header{background:var(--red);color:#fff;padding:22px max(4vw,16px) 26px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;inset:auto 0 0 0;height:8px;background:repeating-linear-gradient(-45deg,#fff 0 14px,var(--red) 14px 28px);opacity:.9}
+.wrap{max-width:720px;margin:0 auto}
+.org{font-size:14px;opacity:.9;margin:0 0 4px}
+header h1{font-size:44px;letter-spacing:.2px}
+.sub{margin:8px 0 0;font-size:17px;font-weight:500;min-height:1.5em}
+main{padding:16px max(4vw,12px) 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.card h2{font-size:26px;margin:0 0 12px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card h2 small{font:500 14px "Barlow",sans-serif;color:var(--mute);white-space:nowrap}
+.lab{display:block;font-size:14px;color:var(--mute);margin:0 0 6px;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chip{min-height:52px;min-width:76px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--field);font-weight:700;font-size:17px;text-align:left;line-height:1.15}
+.chip small{display:block;font-weight:400;font-size:12.5px;color:var(--mute)}
+.chip[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff}
+.chip[aria-pressed=true] small{color:#fff;opacity:.85}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+input[type=text],input[type=datetime-local],input[type=month],textarea,.num input{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);font-size:16px}
+textarea{min-height:72px;resize:vertical}
+.fehltk{border-color:var(--bad)!important;background:var(--badbg)!important}
+.legende{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--mute);margin:0 0 14px;padding:0 4px}
+.legende b{display:inline-block;min-width:30px;text-align:center;border-radius:6px;padding:0 6px;color:var(--on);background:var(--ink)}
+.legende b[data-farbe=ok]{background:var(--ok)}.legende b[data-farbe=bad]{background:var(--bad)}.legende b[data-farbe=warn]{background:var(--warn)}
+.item{padding:12px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;scroll-margin:90px}
+.item:first-of-type{border-top:0}
+.item .t{font-weight:500;display:flex;gap:6px}
+.item .t .nr{flex:none;min-width:1.9em;font-weight:700;color:var(--mute);font-variant-numeric:tabular-nums}
+.item .t small{display:block;color:var(--mute);font-size:13.5px;font-weight:400}
+.item.fehlt .t{color:var(--bad)}
+.item.fehlt .t .txt::after{content:" – bitte ausfüllen";font-size:13.5px;font-weight:600}
+.full{grid-column:1/-1}
+.seg{display:flex;gap:6px}
+.seg button{min-height:48px;min-width:62px;padding:2px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--field);line-height:1.05}
+.seg button b{display:block;font-size:16px}
+.seg button small{display:block;font-size:11.5px;font-weight:500;opacity:.75}
+.seg button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--on)}
+.seg button[aria-pressed=true][data-farbe=ok]{background:var(--ok);border-color:var(--ok)}
+.seg button[aria-pressed=true][data-farbe=bad]{background:var(--bad);border-color:var(--bad)}
+.seg button[aria-pressed=true][data-farbe=warn]{background:var(--warn);border-color:var(--warn)}
+.item.stoerung{background:linear-gradient(90deg,var(--badbg),transparent 70%);margin:0 -16px;padding:12px 16px}
+.item.behoben{background:linear-gradient(90deg,var(--warnbg),transparent 70%);margin:0 -16px;padding:12px 16px}
+.np{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mute);font-weight:600}
+.np input{max-width:200px}
+.num{display:flex;align-items:center;gap:8px;width:170px}
+.num span{color:var(--mute);font-weight:600;white-space:nowrap}
+.num input{text-align:right}
+.tires{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.tires label{display:block;font-size:13.5px;color:var(--ink);font-weight:600}
+.tires label small{display:block;color:var(--mute);font-weight:400;font-size:12.5px}
+.tires input{width:100%;min-height:46px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);text-align:right;font-size:16px;margin-top:3px}
+.tires input.aus{border-color:var(--warn);background:var(--warnbg)}
+.warn{color:var(--warn);font-size:14px;font-weight:600}
+.warn:empty{display:none}
+.hint{color:var(--mute);font-size:13.5px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts button{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font-weight:600}
+.opts button[aria-pressed=true]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.opts button.w[aria-pressed=true]{background:var(--warn);border-color:var(--warn);color:var(--on)}
+.leer{color:var(--mute);text-align:center;padding:28px 12px;border:2px dashed var(--line);border-radius:14px;margin:0 0 14px}
+.sum{border-radius:12px;padding:12px 14px;margin:0 0 14px}
+.sum h3{font-size:21px;margin:0 0 4px}
+.sum p{margin:0 0 6px;font-size:15px}
+.sum ul{margin:0;padding-left:20px}
+.sum li{margin:2px 0}
+.sum.ok{background:var(--okbg)}.sum.ok h3{color:var(--ok)}
+.sum.bad{background:var(--badbg)}.sum.bad h3{color:var(--bad)}
+.sum.warn{background:var(--warnbg)}.sum.warn h3{color:var(--warn)}
+.sum.info{border:1.5px dashed var(--warn)}.sum.info h3{color:var(--warn)}
+.sum.open{background:var(--field);border:1.5px dashed var(--line)}
+.sig{margin:14px 0}
+.sighead{display:flex;justify-content:space-between;align-items:center}
+#sig{display:block;width:100%;height:150px;background:#fff;border:1.5px solid var(--line);border-radius:10px;touch-action:none;margin-top:6px}
+.actions{display:grid;gap:10px;margin-top:16px}
+.btn{min-height:54px;border-radius:12px;border:0;font-weight:600;font-size:17px;padding:0 18px}
+.primary{background:var(--red);color:#fff}
+.secondary{background:var(--field);border:1.5px solid var(--line)}
+.ghost{background:transparent;color:var(--mute);text-decoration:underline;min-height:44px}
+.link{background:none;border:0;color:var(--redink);font-weight:600;padding:6px 0;text-decoration:underline}
+.empf{font-size:14px;color:var(--mute);margin:10px 0 0;overflow-wrap:anywhere}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px max(4vw,12px) calc(10px + env(safe-area-inset-bottom));z-index:5}
+.bar .wrap{display:flex;gap:12px;align-items:center}
+.prog{flex:1}
+.prog b{font-size:15px}
+.prog span{color:var(--mute);font-size:14px}
+.track{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:5px}
+.fill{height:100%;width:0;background:var(--ok);border-radius:99px;transition:width .25s}
+.bar .btn{min-height:48px;font-size:16px;white-space:nowrap}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:end center;z-index:20;padding:12px}
+.dlg[hidden]{display:none}
+.dlgbox{background:var(--card);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow:auto}
+.dlgbox h3{font-size:26px;margin-bottom:8px}
+.dlgbox p{margin:0 0 10px}
+.dlgbtns{display:grid;gap:8px;margin-top:14px}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;font-size:15px;z-index:15;max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+@media(max-width:560px){
+  header h1{font-size:38px}
+  .row2{grid-template-columns:minmax(0,1fr)}
+  .item{grid-template-columns:minmax(0,1fr)}
+  .seg button{flex:1}
+  .num{width:100%}
+  .np{flex-wrap:wrap}.np input{max-width:none}
+}
+@media(prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <p class="org" id="org"></p>
+  <h1>Fahrzeugcheck</h1>
+  <p class="sub" id="sub"></p>
+</div></header>
+
+<main><div class="wrap">
+  <section class="card" id="kopf">
+    <h2>Prüfung</h2>
+    <span class="lab">Fahrzeug</span>
+    <div class="chips" id="fahrzeuge"></div>
+    <div id="paBlock">
+      <span class="lab">Prüfart</span>
+      <div class="chips" id="pruefarten"></div>
+    </div>
+    <div class="row2">
+      <label><span class="lab">Datum und Uhrzeit</span><input type="datetime-local" id="datum"></label>
+      <label><span class="lab">Checkliste erstellt von</span><input type="text" id="pruefer" autocomplete="name" placeholder="Vor- und Nachname"></label>
+    </div>
+  </section>
+
+  <div id="liste"></div>
+
+  <section class="card" id="abschluss">
+    <h2>Abschluss</h2>
+    <div id="zusammenfassung"></div>
+    <label><span class="lab">Bemerkungen (optional)</span><textarea id="bem" placeholder="z. B. Hinweise für den Gerätewart"></textarea></label>
+    <div class="sig" id="sigbox">
+      <div class="sighead"><span class="lab">Unterschrift</span><button type="button" class="link" id="sigClear">Löschen</button></div>
+      <canvas id="sig" aria-label="Unterschriftenfeld"></canvas>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="btnSend">Protokoll per E-Mail senden</button>
+      <button type="button" class="btn secondary" id="btnPdf">PDF teilen oder speichern</button>
+      <button type="button" class="btn ghost" id="btnNeu">Neue Prüfung beginnen</button>
+    </div>
+    <p class="empf" id="empf"></p>
+  </section>
+</div></main>
+
+<div class="bar"><div class="wrap">
+  <div class="prog"><b id="progTxt">0 von 0</b> <span id="progSub">Pflichtpunkte</span><div class="track"><div class="fill" id="fill"></div></div></div>
+  <button type="button" class="btn primary" id="btnAbschluss">Abschließen</button>
+</div></div>
+
+<div class="dlg" id="dlg" hidden><div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgT"><h3 id="dlgT"></h3><div id="dlgB"></div><div class="dlgbtns" id="dlgBtns"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script>
+{
+const C = window.FAHRZEUGCHECK_CONFIG;
+const KEY = 'fahrzeugcheck.entwurf.v3', KEY_NAME = 'fahrzeugcheck.pruefer';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e) {} }
+};
+const bridge = window.AndroidBridge || null;
+const STATUS = C.status || [
+  {id:'ok', kurz:'i.O.', text:'in Ordnung', farbe:'ok'},
+  {id:'mangel', kurz:'Mangel', text:'Mangel', farbe:'bad', stoerung:true, notiz:'Was ist defekt? (Pflicht)'}];
+const stOf = id => STATUS.find(s => s.id === id) || null;
+const ST_S = STATUS.find(s => s.stoerung) || {text:'Störung', kurz:'S'};
+const ST_HINWEIS = ST_S.text.includes('–') ? ST_S.text.split('–').slice(1).join('–').trim() : '';
+const PRUEFARTEN = C.pruefarten || [];
+const pad = n => String(n).padStart(2,'0');
+const nowLocal = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtDatum = v => { const d = (v||'').split('T')[0].split('-'); return d.length === 3 ? `${d[2]}.${d[1]}.${d[0]}` : ''; };
+const fmtZeit = v => (v||'').includes('T') ? v.split('T')[1].slice(0,5) + ' Uhr' : '';
+const fmtMonat = v => /^\d{4}-\d{2}$/.test(v||'') ? `${v.slice(5)}/${v.slice(0,4)}` : '';
+const fmtNum = n => n.toLocaleString('de-DE', {maximumFractionDigits: 2});
+const fmtBar = n => n.toLocaleString('de-DE', {minimumFractionDigits: 1, maximumFractionDigits: 2});
+const plural = (n, e, m) => `${n} ${n === 1 ? e : m}`;
+function num(s){
+  let t = String(s ?? '').replace(/\s/g,'');
+  if (!t) return null;
+  if (t.includes(',')) t = t.replace(/\./g,'').replace(',','.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g,'');
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return NaN;
+  return parseFloat(t);
+}
+
+/* ---------- Checklisten aufbereiten (Nummern vergeben) ---------- */
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40);
+const LISTEN = {};
+function liste(f){
+  if (LISTEN[f.id]) return LISTEN[f.id];
+  let nr = 0;
+  return LISTEN[f.id] = (f.abschnitte || C.abschnitte || []).map(a => ({...a, punkte: a.punkte.map(p0 => {
+    const p = Object.assign({typ:'check'}, typeof p0 === 'string' ? {text:p0} : p0);
+    if (p.nr === false) p.nr = null; else if (typeof p.nr === 'number') nr = p.nr; else p.nr = ++nr;
+    if (!p.id) p.id = p.nr != null ? 'n' + p.nr : 'x-' + slug(p.text);
+    return p;
+  })}));
+}
+
+/* ---------- Zustand ---------- */
+function fresh(){ return {v:3, fahrzeug:null, pruefart:PRUEFARTEN[0]||'', datum:nowLocal(), pruefer:store.get(KEY_NAME)||'', werte:{}, bem:'', sig:null}; }
+let S = null, zeigeFehlt = false, saveT = 0;
+try { S = JSON.parse(store.get(KEY)); } catch(e) {}
+if (!S || S.v !== 3 || !S.werte) S = fresh();
+const restored = !!S.fahrzeug;
+function save(){ clearTimeout(saveT); saveT = setTimeout(() => store.set(KEY, JSON.stringify(S)), 250); }
+
+const fz = () => C.fahrzeuge.find(f => f.id === S.fahrzeug) || null;
+const passt = o => { const f = fz(); return (!o.nurBei || (f && o.nurBei.some(t => (f.tags||[]).includes(t)))) && (!o.pruefarten || !S.pruefart || o.pruefarten.includes(S.pruefart)); };
+const abschnitte = () => { const f = fz(); return !f ? [] : liste(f).filter(passt).map(a => ({...a, punkte:a.punkte.filter(passt)})).filter(a => a.punkte.length); };
+const pflicht = p => p.pflicht ?? (p.typ !== 'text');
+const WV = () => S.werte[S.fahrzeug] || (S.werte[S.fahrzeug] = {});
+const W = id => { const w = WV(); return w[id] || (w[id] = {}); };
+const R = id => (S.werte[S.fahrzeug] || {})[id] || {};
+const sollTxt = (min, max, e) => min != null && max != null ? `${fmtNum(min)}–${fmtNum(max)} ${e}` : min != null ? `mind. ${fmtNum(min)} ${e}` : `max. ${fmtNum(max)} ${e}`;
+const aus = (n, min, max) => n != null && !isNaN(n) && ((min != null && n < min) || (max != null && n > max));
+
+/* Reifenfelder aus fahrzeug.reifen: {VA: 4.1, HA: [2.8, 3.0], Reserverad: 4.5} */
+function reifenFelder(){
+  const f = fz() || {}, r = f.reifen, tol = C.reifenToleranz ?? 0.2;
+  if (!r) return ['VL','VR','HL','HR'].map(n => ({n}));
+  if (Array.isArray(r.felder)) return r.felder.map(n => ({n, min:r.min, max:r.max, soll:r.min != null && r.max != null ? `${fmtBar(r.min)}–${fmtBar(r.max)}` : ''}));
+  const out = [];
+  for (const [k, v] of Object.entries(r)){
+    const [a, b] = Array.isArray(v) ? v : [v, v];
+    const fld = {min: Math.round((a - tol) * 100) / 100, max: Math.round((b + tol) * 100) / 100, soll: a === b ? fmtBar(a) : `${fmtBar(a)}–${fmtBar(b)}`};
+    if (/reserve/i.test(k)) out.push({n:k, ...fld}); else out.push({n:`${k} links`, ...fld}, {n:`${k} rechts`, ...fld});
+  }
+  return out;
+}
+
+function statusTeil(p, v, z){
+  const s = stOf(v.status);
+  z.st = s; z.stoerung = !!(s && s.stoerung); z.behoben = !!(s && s.notiz && !s.stoerung);
+  let ok = !!s;
+  if (s && s.notiz && !(v.note||'').trim()) ok = false;
+  if (p.naechstePruefung && s && !s.stoerung && !fmtMonat(v.np)) ok = false;
+  return ok;
+}
+function zustand(p){
+  const v = R(p.id), z = {done:false, stoerung:false, behoben:false, warn:'', st:null, werteFertig:false};
+  if (p.typ === 'check'){ z.done = statusTeil(p, v, z); }
+  else if (p.typ === 'reifen'){
+    const fe = v.felder || {}, bad = []; let alle = true, falsch = false;
+    for (const f of reifenFelder()){
+      const n = num(fe[f.n]);
+      if (n == null) alle = false; else if (isNaN(n)){ alle = false; falsch = true; }
+      else if (aus(n, f.min, f.max)) bad.push(`${f.n} ${fmtBar(n)} bar (Soll ${f.soll})`);
+    }
+    const st = statusTeil(p, v, z);
+    z.werteFertig = alle; z.done = alle && st;
+    z.warn = falsch ? 'Bitte nur Zahlen eingeben' : bad.join(', ');
+  } else if (p.typ === 'zahl'){
+    const n = num(v.wert);
+    z.done = z.werteFertig = n != null && !isNaN(n);
+    if (v.wert && isNaN(n)) z.warn = 'Bitte eine Zahl eingeben';
+    else if (aus(n, p.min, p.max)) z.warn = `${fmtNum(n)} ${p.einheit||''} außerhalb Soll (${sollTxt(p.min,p.max,p.einheit||'')})`;
+  } else if (p.typ === 'auswahl'){
+    z.done = z.werteFertig = !!v.wert;
+    if (p.warnBei && p.warnBei.includes(v.wert)) z.warn = `${v.wert}${p.hinweis ? ' – ' + p.hinweis : ''}`;
+  } else if (p.typ === 'monat'){
+    z.done = !!fmtMonat(v.wert);
+  } else {
+    z.done = !!(v.wert||'').trim();
+  }
+  return z;
+}
+
+/* ---------- Darstellung ---------- */
+function renderKopf(){
+  $('#org').textContent = C.organisation;
+  $('#fahrzeuge').innerHTML = C.fahrzeuge.map(f => `<button type="button" class="chip" data-fz="${esc(f.id)}" aria-pressed="${S.fahrzeug===f.id}">${esc(f.kurz || f.name)}${f.untertitel || f.kennzeichen ? `<small>${esc(f.untertitel || f.kennzeichen)}</small>` : ''}</button>`).join('');
+  $('#paBlock').hidden = PRUEFARTEN.length <= 1;
+  $('#pruefarten').innerHTML = PRUEFARTEN.map(a => `<button type="button" class="chip" data-pa="${esc(a)}" aria-pressed="${S.pruefart===a}">${esc(a)}</button>`).join('');
+  $('#datum').value = S.datum || '';
+  $('#pruefer').value = S.pruefer || '';
+  $('#bem').value = S.bem || '';
+  $('#empf').textContent = bridge ? `Empfänger: ${C.empfaenger} · PDF wird angehängt` : `Empfänger: ${C.empfaenger}`;
+  $('#sigbox').hidden = !C.unterschrift;
+  $('#btnPdf').hidden = !!bridge;
+  kopfStatus();
+}
+function kopfStatus(){
+  const f = fz();
+  $('#sub').textContent = f ? [f.name, S.pruefart, fmtDatum(S.datum)].filter(Boolean).join(' · ') : 'Fahrzeug wählen und loslegen';
+  $('#fahrzeuge').classList.toggle('fehltk', zeigeFehlt && !f);
+  $('#pruefer').classList.toggle('fehltk', zeigeFehlt && !S.pruefer.trim());
+}
+const segHtml = (p, v) => `<div class="seg" role="group" aria-label="${esc(p.text)}">${STATUS.map(s => `<button type="button" data-st="${esc(s.id)}" data-farbe="${esc(s.farbe||'')}" title="${esc(s.text||s.kurz)}" aria-pressed="${v.status===s.id}"><b>${esc(s.kurz)}</b>${s.label ? `<small>${esc(s.label)}</small>` : ''}</button>`).join('')}</div>`;
+const noteHtml = v => { const s = stOf(v.status); return s && s.notiz ? `<textarea class="full" data-f="note" placeholder="${esc(s.notiz)}" aria-label="Notiz">${esc(v.note)}</textarea>` : ''; };
+function itemHtml(p){
+  const v = R(p.id), z = zustand(p);
+  const cls = ['item', z.stoerung ? 'stoerung' : z.behoben ? 'behoben' : '', zeigeFehlt && pflicht(p) && !z.done ? 'fehlt' : ''].join(' ');
+  const hinweis = p.typ === 'reifen' ? (fz().reifenHinweis || p.hinweis) : (p.typ !== 'auswahl' ? p.hinweis : '');
+  const t = `<div class="t">${p.nr != null ? `<span class="nr">${p.nr}</span>` : ''}<span><span class="txt">${esc(p.text)}</span>${pflicht(p) ? '' : ' <small>optional</small>'}${hinweis ? `<small>${esc(hinweis)}</small>` : ''}</span></div>`;
+  let ctl = '';
+  if (p.typ === 'check'){
+    ctl = segHtml(p, v) + noteHtml(v);
+    if (p.naechstePruefung) ctl += `<label class="np full"><span>Nächste Prüfung</span><input type="month" data-f="np" value="${esc(v.np)}" aria-label="Nächste Prüfung (Monat und Jahr)"></label>`;
+  } else if (p.typ === 'reifen'){
+    const fe = v.felder || {};
+    ctl = `<div class="tires full">${reifenFelder().map(f => `<label>${esc(f.n)}${f.soll ? `<small>Soll ${esc(f.soll)} bar</small>` : ''}<input data-feld="${esc(f.n)}" inputmode="decimal" autocomplete="off" value="${esc(fe[f.n])}" class="${aus(num(fe[f.n]), f.min, f.max) ? 'aus' : ''}" aria-label="${esc(p.text)} ${esc(f.n)} in bar"></label>`).join('')}</div>
+      <div class="warn full">${esc(z.warn)}</div><div class="full">${segHtml(p, v)}</div>${noteHtml(v)}`;
+  } else if (p.typ === 'zahl'){
+    ctl = `<label class="num"><input data-f="wert" inputmode="decimal" autocomplete="off" value="${esc(v.wert)}" aria-label="${esc(p.text)}"><span>${esc(p.einheit||'')}</span></label><div class="warn full">${esc(z.warn)}</div>`;
+  } else if (p.typ === 'auswahl'){
+    ctl = `<div class="opts full" role="group" aria-label="${esc(p.text)}">${p.optionen.map(o => `<button type="button" data-opt="${esc(o)}" class="${(p.warnBei||[]).includes(o) ? 'w' : ''}" aria-pressed="${v.wert===o}">${esc(o)}</button>`).join('')}</div><div class="warn full">${esc(z.warn)}</div>`;
+  } else if (p.typ === 'monat'){
+    ctl = `<label class="np"><input type="month" data-f="wert" value="${esc(v.wert)}" aria-label="${esc(p.text)} (Monat und Jahr)"></label>`;
+  } else {
+    ctl = `<textarea class="full" data-f="wert" aria-label="${esc(p.text)}">${esc(v.wert)}</textarea>`;
+  }
+  return `<div class="${cls}" id="p-${esc(p.id)}" data-id="${esc(p.id)}">${t}${ctl}</div>`;
+}
+function renderListe(){
+  if (!fz()){ $('#liste').innerHTML = `<div class="leer">Oben ein Fahrzeug wählen – dann erscheint dessen Checkliste.</div>`; fortschritt(); return; }
+  const leg = `<div class="legende">${STATUS.map(s => `<span><b data-farbe="${esc(s.farbe||'')}">${esc(s.kurz)}</b> ${esc(s.text)}</span>`).join('')}</div>`;
+  $('#liste').innerHTML = leg + abschnitte().map((a, i) => `<section class="card" data-sec="${i}"><h2>${esc(a.titel)} <small data-cnt="${i}"></small></h2>${a.punkte.map(itemHtml).join('')}</section>`).join('');
+  fortschritt();
+}
+function refreshItem(id, ganz){
+  const p = abschnitte().flatMap(a => a.punkte).find(x => x.id === id), el = document.getElementById('p-' + id);
+  if (!p || !el) return;
+  if (ganz){ el.outerHTML = itemHtml(p); }
+  else {
+    const z = zustand(p);
+    el.classList.toggle('fehlt', zeigeFehlt && pflicht(p) && !z.done);
+    const w = el.querySelector('.warn'); if (w) w.textContent = z.warn;
+    if (p.typ === 'reifen'){ const ff = reifenFelder(); el.querySelectorAll('[data-feld]').forEach(i => { const f = ff.find(x => x.n === i.dataset.feld); i.classList.toggle('aus', !!f && aus(num(i.value), f.min, f.max)); }); }
+  }
+  fortschritt();
+}
+function auswertung(){
+  const abs = abschnitte(); let gesamt = 0, erledigt = 0; const maengel = [], behoben = [], auff = [], offen = [];
+  abs.forEach((a, i) => {
+    let g = 0, e = 0;
+    a.punkte.forEach(p => {
+      const z = zustand(p), note = (R(p.id).note||'').trim();
+      if (pflicht(p)){ g++; if (z.done) e++; else offen.push(p.id); }
+      if (z.stoerung) maengel.push({nr:p.nr, a:a.titel, p:p.text, note});
+      if (z.behoben) behoben.push({nr:p.nr, a:a.titel, p:p.text, note});
+      if (z.warn && z.werteFertig) auff.push({nr:p.nr, p:p.text, w:z.warn});
+    });
+    gesamt += g; erledigt += e;
+    const c = document.querySelector(`[data-cnt="${i}"]`); if (c) c.textContent = `${e}/${g}`;
+  });
+  return {gesamt, erledigt, maengel, behoben, auff, offen};
+}
+const nrTxt = m => m.nr != null ? `Nr. ${m.nr} ` : '';
+const liHtml = m => `<li>${esc(nrTxt(m))}<b>${esc(m.p)}</b>${m.note ? ': ' + esc(m.note) : ''}</li>`;
+function fortschritt(){
+  const a = auswertung(), n = a.maengel.length;
+  $('#progTxt').textContent = fz() ? `${a.erledigt} von ${a.gesamt}` : '–';
+  const ST_B = STATUS.find(s => s.notiz && !s.stoerung);
+  $('#progSub').textContent = !fz() ? 'Fahrzeug wählen' : (n || a.behoben.length) ? [n ? `${n}× ${ST_S.kurz}` : '', a.behoben.length && ST_B ? `${a.behoben.length}× ${ST_B.kurz}` : ''].filter(Boolean).join(' · ') : 'Pflichtpunkte';
+  $('#fill').style.width = a.gesamt ? (100 * a.erledigt / a.gesamt) + '%' : '0';
+  $('#fill').style.background = n ? 'var(--bad)' : 'var(--ok)';
+  const kopfOffen = (!fz() ? 1 : 0) + (!(S.pruefer||'').trim() ? 1 : 0);
+  let h = '';
+  if (!fz()) h = `<div class="sum open"><h3>Noch kein Fahrzeug gewählt</h3></div>`;
+  else {
+    const off = a.offen.length + kopfOffen;
+    if (off) h += `<div class="sum open"><h3>Noch ${plural(off, 'Pflichtangabe', 'Pflichtangaben')} offen</h3><button type="button" class="link" id="zumOffenen">Zur ersten offenen Stelle springen</button></div>`;
+    if (n) h += `<div class="sum bad"><h3>${plural(n, 'Störung', 'Störungen')}</h3>${ST_HINWEIS ? `<p>${esc(ST_HINWEIS)}</p>` : ''}<ul>${a.maengel.map(liHtml).join('')}</ul></div>`;
+    if (a.behoben.length) h += `<div class="sum warn"><h3>${a.behoben.length} selbst behoben</h3><ul>${a.behoben.map(liHtml).join('')}</ul></div>`;
+    if (a.auff.length) h += `<div class="sum info"><h3>Auffällige Werte</h3><ul>${a.auff.map(m => `<li>${esc(nrTxt(m))}<b>${esc(m.p)}:</b> ${esc(m.w)}</li>`).join('')}</ul></div>`;
+    if (!off && !n) h += `<div class="sum ok"><h3>Alles erledigt – keine offenen Störungen</h3></div>`;
+  }
+  $('#zusammenfassung').innerHTML = h;
+  kopfStatus();
+}
+function ersteOffene(){
+  if (!fz()) return $('#kopf');
+  if (!(S.pruefer||'').trim()) return $('#pruefer');
+  const id = auswertung().offen[0];
+  return id ? document.getElementById('p-' + id) : null;
+}
+function springe(el){
+  if (!el) return;
+  el.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'center'});
+  const f = el.matches('input,textarea') ? el : el.querySelector('input:placeholder-shown,textarea:placeholder-shown,input[type=month]') || el.querySelector('input,textarea');
+  if (f) setTimeout(() => f.focus({preventScroll:true}), 350);
+}
+
+/* ---------- Dialog und Hinweis ---------- */
+function dialog(titel, html, knoepfe){
+  $('#dlgT').textContent = titel; $('#dlgB').innerHTML = html;
+  $('#dlgBtns').innerHTML = knoepfe.map((k, i) => `<button type="button" class="btn ${k.cls||'secondary'}" data-k="${i}">${esc(k.t)}</button>`).join('');
+  $('#dlgBtns').onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; const k = knoepfe[+b.dataset.k]; if (!k.bleiben) $('#dlg').hidden = true; if (k.fn) k.fn(b); };
+  $('#dlg').hidden = false; $('#dlgBtns button').focus();
+}
+let toastT = 0;
+function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3200); }
+
+/* ---------- Unterschrift ---------- */
+const cv = $('#sig'); let ctx = null, zeichnen = false, sigImg = null;
+function sigGroesse(){
+  if (!C.unterschrift) return;
+  const r = cv.getBoundingClientRect(); if (!r.width) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+  if (S.sig){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, r.width, r.height); img.src = S.sig; sigImg = img; }
+}
+const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+cv.addEventListener('pointerdown', e => { if (!ctx) sigGroesse(); zeichnen = true; try { cv.setPointerCapture(e.pointerId); } catch(_) {} const [x,y] = pos(e); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+0.1,y+0.1); ctx.stroke(); });
+cv.addEventListener('pointermove', e => { if (!zeichnen) return; const [x,y] = pos(e); ctx.lineTo(x,y); ctx.stroke(); });
+const sigEnde = () => { if (!zeichnen) return; zeichnen = false; sigImg = null; S.sig = cv.toDataURL('image/png'); save(); };
+cv.addEventListener('pointerup', sigEnde); cv.addEventListener('pointercancel', sigEnde);
+$('#sigClear').onclick = () => { S.sig = null; sigImg = null; save(); if (ctx) ctx.clearRect(0,0,cv.width,cv.height); };
+let rzT = 0; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(sigGroesse, 200); });
+
+/* ---------- Protokoll ---------- */
+function protokoll(){
+  const f = fz(), a = auswertung();
+  const zeilen = abschnitte().map(ab => ({titel: ab.titel, zeilen: ab.punkte.map(p => {
+    const v = R(p.id), z = zustand(p), r = {nr: p.nr, text: p.text, st: null, werte: [], bem: (v.note||'').trim(), np: ''};
+    if (p.typ === 'check'){ r.st = z.st; if (p.naechstePruefung) r.np = fmtMonat(v.np); }
+    else if (p.typ === 'reifen'){ r.st = z.st; const fe = v.felder || {};
+      r.werte = reifenFelder().map(ff => { const n = num(fe[ff.n]); return {t: `${ff.n}: ${n != null && !isNaN(n) ? fmtBar(n) : '–'} bar`, w: aus(n, ff.min, ff.max)}; }); }
+    else if (p.typ === 'zahl'){ const n = num(v.wert); r.werte = [{t: n != null && !isNaN(n) ? `${fmtNum(n)} ${p.einheit||''}`.trim() : '–', w: !!z.warn}]; if (z.warn) r.bem = `außerhalb Soll (${sollTxt(p.min,p.max,p.einheit||'')})`; }
+    else if (p.typ === 'auswahl'){ r.werte = [{t: v.wert || '–', w: !!z.warn}]; if (z.warn && p.hinweis) r.bem = p.hinweis; }
+    else if (p.typ === 'monat'){ r.werte = [{t: fmtMonat(v.wert) || '–', w: false}]; }
+    else { r.werte = [{t: '–', w: false}]; r.bem = (v.wert||'').trim(); }
+    return r;
+  })}));
+  const n = a.maengel.length, ergebnis = [];
+  if (n) ergebnis.push(plural(n, 'Störung', 'Störungen'));
+  if (a.behoben.length) ergebnis.push(`${a.behoben.length} selbst behoben`);
+  const datum = fmtDatum(S.datum), zeit = fmtZeit(S.datum);
+  const betreff = (C.betreff || 'Checkliste {fahrzeug} – {datum}{maengel}')
+    .replace('{fahrzeug}', f.name).replace('{pruefart}', S.pruefart || '').replace('{datum}', datum)
+    .replace('{maengel}', ergebnis.length ? ' – ' + ergebnis.join(', ') : ' – ohne Störungen')
+    .replace(/\s+–\s+(?=–)/g, ' ').replace(/\s+–\s*$/, '').trim();
+  const L = [];
+  L.push('FAHRZEUG-CHECKLISTE', C.organisation, '', `Fahrzeug: ${f.name}${f.kennzeichen ? ` (${f.kennzeichen})` : ''}`);
+  if (S.pruefart) L.push(`Prüfart: ${S.pruefart}`);
+  L.push(`Datum: ${datum}, ${zeit}`, `Checkliste erstellt von: ${S.pruefer.trim()}`, '');
+  L.push(`ERGEBNIS: ${ergebnis.length ? ergebnis.join(', ') : 'ohne Störungen'}${a.auff.length ? `, ${plural(a.auff.length, 'auffälliger Wert', 'auffällige Werte')}` : ''}`);
+  if (n){ L.push('', `STÖRUNGEN${ST_HINWEIS ? ' – ' + ST_HINWEIS : ''}`.toUpperCase()); a.maengel.forEach(m => L.push(`• ${nrTxt(m)}${m.p}: ${m.note}`)); }
+  if (a.behoben.length){ L.push('', 'SELBST BEHOBEN'); a.behoben.forEach(m => L.push(`• ${nrTxt(m)}${m.p}: ${m.note}`)); }
+  if (a.auff.length){ L.push('', 'AUFFÄLLIGE WERTE'); a.auff.forEach(m => L.push(`• ${nrTxt(m)}${m.p}: ${m.w}`)); }
+  zeilen.forEach(ab => {
+    L.push('', ab.titel.toUpperCase());
+    ab.zeilen.forEach(r => {
+      const vor = `${r.nr != null ? r.nr + '. ' : ''}${r.st ? `[${r.st.kurz}] ` : ''}`;
+      const werte = r.werte.length ? ': ' + r.werte.map(w => w.t + (w.w ? ' (!)' : '')).join(' · ') : '';
+      L.push(`${vor}${r.text}${werte}${r.np ? ` – nächste Prüfung ${r.np}` : ''}${r.bem ? ` – ${r.bem}` : ''}`);
+    });
+  });
+  if ((S.bem||'').trim()) L.push('', 'BEMERKUNGEN', S.bem.trim());
+  L.push('', '—', bridge ? 'Das Protokoll mit Unterschrift liegt als PDF bei.' : 'Erstellt mit Fahrzeugcheck.');
+  const datei = `Checkliste_${f.kurz || f.name}_${(S.datum||'').split('T')[0]}.pdf`.replace(/[^A-Za-z0-9._-]+/g, '-');
+  const prot = {betreff, text: L.join('\n'), datei, f, datum, zeit, ergebnis, maengel: a.maengel, behoben: a.behoben, auff: a.auff, zeilen};
+  prot.pdf = pdfProtokoll(prot);
+  return prot;
+}
+
+/* ---------- PDF (ohne externe Bibliothek, Helvetica/WinAnsi) ---------- */
+const WID = (() => { const w = new Array(256).fill(556);
+  [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584].forEach((v,i) => w[32+i] = v);
+  Object.entries({128:556,132:333,133:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,155:333,160:278,167:556,176:400,178:333,179:333,181:556,183:278,188:834,189:834,190:834,196:667,201:667,214:778,215:584,220:722,223:611,228:556,233:556,246:556,252:556}).forEach(([k,v]) => w[k] = v);
+  return w; })();
+const HI = {'€':128,'‚':130,'„':132,'…':133,'‘':145,'’':146,'“':147,'”':148,'•':149,'–':150,'—':151,'›':155,'™':153};
+function wa(s){ s = String(s ?? '').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/[  \t\r\n]/g,' '); let o = ''; for (const ch of s){ const c = ch.codePointAt(0); o += HI[ch] ? String.fromCharCode(HI[ch]) : (c >= 32 && c < 127) || (c >= 160 && c <= 255) ? ch : '?'; } return o; }
+const tw = (s, size, bold) => { let t = 0; for (let i = 0; i < s.length; i++) t += WID[s.charCodeAt(i)]; return t * size / 1000 * (bold ? 1.08 : 1); };
+function wrap(text, maxW, size, bold){
+  const out = [];
+  for (const para of String(text ?? '').split('\n')){
+    let line = '';
+    for (let w of wa(para).split(' ')){
+      while (tw(w, size, bold) > maxW){ let k = w.length; while (k > 1 && tw(w.slice(0,k), size, bold) > maxW) k--; if (line){ out.push(line); line = ''; } out.push(w.slice(0,k)); w = w.slice(k); }
+      const t = line ? line + ' ' + w : w;
+      if (tw(t, size, bold) <= maxW) line = t; else { out.push(line); line = w; }
+    }
+    out.push(line);
+  }
+  return out;
+}
+function Pdf(){
+  const Wd = 595.28, Ht = 841.89, pages = [], imgs = []; let c = null;
+  const f = n => String(Math.round(n * 100) / 100);
+  const pe = s => s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+  const col = rgb => rgb.map(f).join(' ');
+  return { W: Wd, H: Ht,
+    page(){ c = []; pages.push(c); },
+    on(i){ c = pages[i]; }, get n(){ return pages.length; },
+    text(x, y, s, size = 10, bold = false, rgb = [0.09,0.1,0.11]){ c.push(`BT /${bold?'F2':'F1'} ${f(size)} Tf ${col(rgb)} rg ${f(x)} ${f(y)} Td (${pe(s)}) Tj ET`); },
+    rect(x, y, w, h, rgb){ c.push(`q ${col(rgb)} rg ${f(x)} ${f(y)} ${f(w)} ${f(h)} re f Q`); },
+    line(x1, y1, x2, y2, wd = 0.5, rgb = [0.8,0.8,0.8]){ c.push(`q ${f(wd)} w ${col(rgb)} RG ${f(x1)} ${f(y1)} m ${f(x2)} ${f(y2)} l S Q`); },
+    image(bin, pw, ph, x, y, w, h){ imgs.push({bin, pw, ph}); c.push(`q ${f(w)} 0 0 ${f(h)} ${f(x)} ${f(y)} cm /Im${imgs.length} Do Q`); },
+    build(titel){
+      const o = [], fi = 5, fp = 5 + imgs.length;
+      o[0] = '<< /Type /Catalog /Pages 2 0 R >>';
+      o[1] = `<< /Type /Pages /Kids [${pages.map((_, i) => `${fp + i*2} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+      o[2] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+      o[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+      imgs.forEach((im, i) => { o[fi - 1 + i] = `<< /Type /XObject /Subtype /Image /Width ${im.pw} /Height ${im.ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bin.length} >>\nstream\n${im.bin}\nendstream`; });
+      const xo = imgs.length ? ` /XObject << ${imgs.map((_, i) => `/Im${i+1} ${fi + i} 0 R`).join(' ')} >>` : '';
+      pages.forEach((ops, i) => { const pn = fp + i*2, cs = ops.join('\n');
+        o[pn - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${Wd} ${Ht}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xo} >> /Contents ${pn + 1} 0 R >>`;
+        o[pn] = `<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`; });
+      const u16 = s => '<FEFF' + Array.from(s, ch => ch.charCodeAt(0).toString(16).padStart(4, '0')).join('').toUpperCase() + '>';
+      o.push(`<< /Title ${u16(titel)} /Producer (Fahrzeugcheck) >>`);
+      let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs = [];
+      o.forEach((x, i) => { offs.push(out.length); out += `${i+1} 0 obj\n${x}\nendobj\n`; });
+      const xr = out.length;
+      out += `xref\n0 ${o.length + 1}\n0000000000 65535 f \n` + offs.map(v => String(v).padStart(10,'0') + ' 00000 n \n').join('');
+      out += `trailer\n<< /Size ${o.length + 1} /Root 1 0 R /Info ${o.length} 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+      const b = new Uint8Array(out.length); for (let i = 0; i < out.length; i++) b[i] = out.charCodeAt(i) & 255; return b;
+    }
+  };
+}
+function sigJpeg(){
+  if (!C.unterschrift || !S.sig || !cv.width) return null;
+  const t = document.createElement('canvas'); t.width = cv.width; t.height = cv.height;
+  const x = t.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0,0,t.width,t.height);
+  if (sigImg && sigImg.complete && sigImg.naturalWidth) x.drawImage(sigImg, 0, 0, t.width, t.height); else x.drawImage(cv, 0, 0);
+  return {bin: atob(t.toDataURL('image/jpeg', 0.85).split(',')[1]), w: t.width, h: t.height};
+}
+function pdfProtokoll(p){
+  const d = Pdf(), M = 40, Rr = d.W - 40, BOT = 54;
+  const RED = [0.70,0.14,0.11], GR = [0.40,0.42,0.44], INK = [0.09,0.1,0.11], OK = [0.11,0.48,0.22], AMB = [0.62,0.36,0];
+  const FARBE = {ok: OK, bad: RED, warn: AMB};
+  const X = {n: M + 4, p: M + 28, e: M + 248, b: M + 358}, WP = 212, WE = 104, WB = Rr - X.b - 4;
+  let y = 0;
+  function seite(){ d.page(); y = d.H - 40;
+    d.rect(0, d.H - 10, d.W, 10, RED);
+    d.text(M, y - 6, wa(C.organisation), 9, false, GR);
+    d.text(M, y - 28, wa('Fahrzeug-Checkliste'), 19, true, INK);
+    const r = wa(`${p.f.kurz || p.f.name} · ${p.datum}`); d.text(Rr - tw(r, 11, true), y - 28, r, 11, true, INK);
+    y -= 40; d.line(M, y, Rr, y, 1.2, RED); y -= 18; }
+  const platz = h => { if (y - h < BOT){ seite(); return true; } return false; };
+  function kopf(t){ let s = wa(t); const max = X.e - X.p - 8; if (tw(s, 10.5, true) > max){ while (s.length > 1 && tw(s + '\x85', 10.5, true) > max) s = s.slice(0, -1); s = s.trimEnd() + '\x85'; }
+    d.rect(M, y - 17, Rr - M, 19, [0.93,0.93,0.92]); d.text(X.n, y - 11.5, 'Nr.', 8, false, GR); d.text(X.p, y - 11.5, s, 10.5, true, INK);
+    d.text(X.e, y - 11, 'Ergebnis', 8, false, GR); d.text(X.b, y - 11, 'Bemerkung', 8, false, GR); y -= 19; }
+  seite();
+  const meta = [['Fahrzeug', p.f.name + (p.f.kennzeichen ? ` (${p.f.kennzeichen})` : '')]];
+  if (S.pruefart) meta.push(['Prüfart', S.pruefart]);
+  meta.push(['Datum', `${p.datum}, ${p.zeit}`], ['Erstellt von', S.pruefer.trim()]);
+  meta.forEach(([k, v]) => { d.text(M, y, wa(k), 9, false, GR); d.text(M + 82, y, wa(v), 10.5, true, INK); y -= 16; });
+  y -= 6;
+  const n = p.maengel.length, box = [], BW = Rr - M - 24;
+  box.push({t: wa(n ? `${p.ergebnis.join(', ')}` : p.ergebnis.length ? `Keine offenen Störungen (${p.ergebnis.join(', ')})` : 'Keine Störungen festgestellt'), b: true, c: n ? RED : p.ergebnis.length ? AMB : OK, s: 11.5});
+  const gruppe = (titel, liste, farbe, fn) => { if (!liste.length) return; box.push({t: wa(titel), b: true, c: farbe, s: 10}); liste.forEach(m => wrap(fn(m), BW, 9.5).forEach(l => box.push({t: l, c: INK, s: 9.5}))); };
+  gruppe(`Störungen${ST_HINWEIS ? ' – ' + ST_HINWEIS : ''}`, p.maengel, RED, m => `• ${nrTxt(m)}${m.p}: ${m.note}`);
+  gruppe('Selbst behoben', p.behoben, AMB, m => `• ${nrTxt(m)}${m.p}: ${m.note}`);
+  gruppe('Auffällige Werte', p.auff, AMB, m => `• ${nrTxt(m)}${m.p}: ${m.w}`);
+  const bh = box.length * 13.5 + 14; platz(bh);
+  d.rect(M, y - bh, Rr - M, bh, n ? [1,0.93,0.92] : p.ergebnis.length || p.auff.length ? [1,0.96,0.88] : [0.9,0.96,0.92]);
+  box.forEach((l, i) => d.text(M + 12, y - 18 - i * 13.5, l.t, l.s, !!l.b, l.c));
+  y -= bh + 16;
+  for (const ab of p.zeilen){
+    platz(19 + 22); kopf(ab.titel);
+    for (const r of ab.zeilen){
+      const pl = wrap(r.text, WP, 9.5);
+      const el = [];
+      if (r.st) el.push({t: r.st.kurz, c: FARBE[r.st.farbe] || INK, b: true});
+      r.werte.forEach(w => el.push({t: w.t, c: w.w ? AMB : INK, b: w.w}));
+      if (!el.length) el.push({t: 'offen', c: GR, b: false});
+      const bl = [...(r.np ? wrap(`Nächste Prüfung: ${r.np}`, WB, 9) : []), ...(r.bem ? wrap(r.bem, WB, 9) : [])];
+      const h = Math.max(pl.length, el.length, bl.length) * 12 + 9;
+      if (platz(h)) kopf(ab.titel + ' (Forts.)');
+      const yy = y - 12.5;
+      if (r.nr != null){ const s = String(r.nr); d.text(X.n + 16 - tw(s, 9.5), yy, s, 9.5, false, GR); }
+      pl.forEach((l, i) => d.text(X.p, yy - i * 12, l, 9.5, false, INK));
+      el.forEach((e, i) => d.text(X.e, yy - i * 12, wa(e.t), 9.5, e.b, e.c));
+      const bc = r.st && r.st.stoerung ? RED : r.st && r.st.notiz ? AMB : GR;
+      bl.forEach((l, i) => d.text(X.b, yy - i * 12, l, 9, false, bc));
+      y -= h; d.line(M, y, Rr, y, 0.4, [0.86,0.86,0.85]);
+    }
+    y -= 12;
+  }
+  if ((S.bem||'').trim()){
+    const bl = wrap(S.bem.trim(), Rr - M, 10); platz(22 + bl.length * 13);
+    d.text(M, y - 4, 'Bemerkungen', 10.5, true, INK); y -= 20; bl.forEach(l => { platz(13); d.text(M, y, l, 10, false, INK); y -= 13; }); y -= 8;
+  }
+  const sig = sigJpeg(); platz(100);
+  d.text(M, y - 4, 'Unterschrift', 9, false, GR); y -= 12;
+  if (sig){ const ar = sig.w / sig.h, h = Math.min(70, 230 / ar), w = h * ar; d.image(sig.bin, sig.w, sig.h, M, y - h, w, h); y -= h; }
+  else y -= 40;
+  d.line(M, y - 2, M + 230, y - 2, 0.8, INK); d.text(M, y - 14, wa(`${S.pruefer.trim()}, ${p.datum}`), 9, false, GR);
+  const tot = d.n;
+  for (let i = 0; i < tot; i++){ d.on(i); d.line(M, 38, Rr, 38, 0.4, [0.8,0.8,0.8]); d.text(M, 26, wa(`${C.organisation} · erstellt mit Fahrzeugcheck`), 8, false, GR); const s = `Seite ${i+1} von ${tot}`; d.text(Rr - tw(s, 8), 26, s, 8, false, GR); }
+  return d.build(p.betreff);
+}
+const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+
+/* ---------- Versand ---------- */
+function pruefen(){
+  zeigeFehlt = true; renderListe();
+  const el = ersteOffene();
+  if (el){ const n = auswertung().offen.length + (!fz() ? 1 : 0) + (!(S.pruefer||'').trim() ? 1 : 0);
+    dialog('Noch nicht vollständig', `<p>Es ${n===1?'fehlt noch 1 Pflichtangabe':`fehlen noch ${n} Pflichtangaben`}. Sie sind rot markiert. Bei S und B braucht es eine kurze Notiz, bei Löschern und Plomben die nächste Prüfung.</p>`, [{t:'Zur ersten offenen Stelle', cls:'primary', fn:() => springe(el)}]);
+    return false; }
+  return true;
+}
+function zuruecksetzen(){ const name = S.pruefer; S = fresh(); S.pruefer = name; zeigeFehlt = false; sigImg = null; store.set(KEY, JSON.stringify(S)); renderKopf(); renderListe(); if (ctx) ctx.clearRect(0,0,cv.width,cv.height); window.scrollTo(0,0); }
+async function kopieren(text, btn){ try { await navigator.clipboard.writeText(text); if (btn) btn.textContent = 'Kopiert ✓'; } catch(e){ if (btn) btn.textContent = 'Kopieren nicht möglich'; } }
+async function pdfTeilen(p){
+  const blob = new Blob([p.pdf], {type:'application/pdf'});
+  try { const file = new File([blob], p.datei, {type:'application/pdf'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:p.betreff, text:p.betreff}); return; } }
+  catch(e){ if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = p.datei; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000); toast('PDF wird heruntergeladen');
+}
+function nachVersand(p, viaApp){
+  dialog(viaApp ? 'Mail-App geöffnet' : 'E-Mail vorbereitet',
+    `<p>Bitte in der Mail-App Empfänger und Text prüfen und auf <b>Senden</b> tippen.</p>${viaApp ? '' : `<p style="color:var(--mute);font-size:15px">Falls sich nichts geöffnet hat: Text kopieren und an <b>${esc(C.empfaenger)}</b> schicken, Betreff „${esc(p.betreff)}“.</p>`}`,
+    [...(viaApp ? [] : [{t:'Text kopieren', bleiben:true, fn:b => kopieren(p.betreff + '\n\n' + p.text, b)}, {t:'PDF teilen', bleiben:true, fn:() => pdfTeilen(p)}]),
+     {t:'Gesendet – neue Prüfung beginnen', cls:'primary', fn:() => { zuruecksetzen(); toast('Formular geleert'); }},
+     {t:'Zurück zum Formular', cls:'ghost'}]);
+}
+function senden(){
+  if (!pruefen()) return;
+  const p = protokoll();
+  if (bridge && bridge.sendMail){ try { bridge.sendMail(C.empfaenger, p.betreff, p.text, b64(p.pdf), p.datei); nachVersand(p, true); } catch(e){ toast('Mail-App konnte nicht geöffnet werden'); } return; }
+  const to = C.empfaenger.split(',').map(s => s.trim()).filter(Boolean).join(',');
+  location.href = `mailto:${to}?subject=${encodeURIComponent(p.betreff)}&body=${encodeURIComponent(p.text.replace(/\n/g, '\r\n'))}`;
+  setTimeout(() => nachVersand(p, false), 400);
+}
+
+/* ---------- Ereignisse ---------- */
+$('#fahrzeuge').onclick = e => { const b = e.target.closest('[data-fz]'); if (!b) return; S.fahrzeug = b.dataset.fz; zeigeFehlt = false; save(); renderKopf(); renderListe(); };
+$('#pruefarten').onclick = e => { const b = e.target.closest('[data-pa]'); if (!b) return; S.pruefart = b.dataset.pa; save(); renderKopf(); renderListe(); };
+$('#datum').oninput = e => { S.datum = e.target.value; save(); kopfStatus(); };
+$('#pruefer').oninput = e => { S.pruefer = e.target.value; store.set(KEY_NAME, S.pruefer.trim()); save(); fortschritt(); };
+$('#bem').oninput = e => { S.bem = e.target.value; save(); };
+$('#liste').addEventListener('click', e => {
+  const it = e.target.closest('.item'); if (!it) return; const id = it.dataset.id;
+  const st = e.target.closest('[data-st]'), op = e.target.closest('[data-opt]');
+  if (st){ const w = W(id); w.status = w.status === st.dataset.st ? undefined : st.dataset.st; save(); refreshItem(id, true);
+    const s = stOf(w.status); if (s && s.notiz){ const t = document.querySelector(`#p-${CSS.escape(id)} textarea[data-f=note]`); if (t && !t.value) t.focus(); } }
+  else if (op){ const w = W(id); w.wert = w.wert === op.dataset.opt ? undefined : op.dataset.opt; save(); refreshItem(id, true); }
+});
+$('#liste').addEventListener('input', e => {
+  const it = e.target.closest('.item'); if (!it) return; const id = it.dataset.id, w = W(id);
+  if (e.target.dataset.f) w[e.target.dataset.f] = e.target.value;
+  else if (e.target.dataset.feld){ (w.felder = w.felder || {})[e.target.dataset.feld] = e.target.value; }
+  save(); refreshItem(id, false);
+});
+$('#zusammenfassung').addEventListener('click', e => { if (e.target.id === 'zumOffenen'){ zeigeFehlt = true; renderListe(); springe(ersteOffene()); } });
+$('#btnAbschluss').onclick = () => { $('#abschluss').scrollIntoView({behavior:'smooth'}); };
+$('#btnSend').onclick = senden;
+$('#btnPdf').onclick = () => { if (pruefen()) pdfTeilen(protokoll()); };
+$('#btnNeu').onclick = () => dialog('Neue Prüfung beginnen?', '<p>Alle Eingaben dieser Prüfung werden gelöscht. Dein Name bleibt gespeichert.</p>', [{t:'Ja, Formular leeren', cls:'primary', fn:zuruecksetzen}, {t:'Abbrechen', cls:'ghost'}]);
+$('#dlg').addEventListener('click', e => { if (e.target.id === 'dlg') $('#dlg').hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#dlg').hidden = true; });
+
+renderKopf(); renderListe(); sigGroesse();
+if (restored) toast('Entwurf wiederhergestellt');
+if ('serviceWorker' in navigator && location.protocol === 'https:'){ try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){} }
+window.__fahrzeugcheck = {protokoll, get S(){ return S; }};
+}
+</script>
+</body>
+</html>
