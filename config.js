@@ -566,7 +566,7 @@ window.FAHRZEUGCHECK_CONFIG = {
       ]
     },
     {
-      id: "61-1-sa", kurz: "61/1 SA", untertitel: "Anhänger Ölschaden / Logistik", name: "Anhänger Ölschaden/Logistik (61/1 SA)",
+      id: "61-1-sa", kurz: "61/1 ÖSA", untertitel: "Anhänger Ölschaden / Logistik", name: "Anhänger Ölschaden/Logistik (61/1 ÖSA)",
       abschnitte: [
         { titel: "Aufbau und Fahrgestell", punkte: [
           "Keine sichtbaren Schäden (Rost, sonst. Schäden)",
